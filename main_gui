@@ -1,0 +1,120 @@
+from tkinter import *
+import gui
+import tkinter as tk
+import pyaudio
+import wave
+import sys
+import mikrofon
+import mm
+from techmo_sarmata_pyclient.utils.wave_loader import load_wave
+from techmo_sarmata_pyclient.service.sarmata_settings import SarmataSettings
+from techmo_sarmata_pyclient.service.sarmata_recognize import SarmataRecognizer
+from techmo_sarmata_pyclient.service.asr_service_pb2 import ResponseStatus
+from address_provider import AddressProvider
+import os
+
+
+def PressedButton():
+
+    if True:
+
+            labelx = Label(root, text="Spis Twoich Filmów:", bg="LightBLUE", font="Times 14 underline")
+            labely = Label(root,
+                           text="1.Titanic\n 2.Piraci z Karaibów\n 3.Przyjaciele\n 4.Pamiętnik\n 5.Mała Syrenka\n 6.Epoka lodowcowa\n 7.Incepcja",
+                           bg="LightBlue", font="Times 12")
+            #labelx=Label(root,text="Program jest teraz aktywny",bg="LightGreen",font="Times, 12")
+            labelx.pack(side=LEFT)
+            labely.pack(side=LEFT)
+
+    mm.play()
+
+    mikrofon.nagr()
+
+
+
+    def print_results(responses):
+        if responses is None:
+            print("Empty results - None object")
+            return
+
+        for response in responses:
+            if response is None:
+                print("Empty results - skipping response")
+                continue
+
+            print("Received response with status: {}".format(ResponseStatus.Name(response.status)))
+
+            if response.error:
+                print("[ERROR]: {}".format(response.error))
+
+            for n, res in enumerate(response.results):
+                transcript = " ".join([word.transcript for word in res.words])
+                print("[{}.] {} /{}/ ({})".format(n, transcript, res.semantic_interpretation, res.confidence))
+
+    def print_results2(responses):
+        info = ["NO_MATCH", 0]
+        confidence = 0
+        if responses is None:
+            print("Empty results - None object")
+            return info
+
+        for response in responses:
+            if response is None:
+                print("Empty results - skipping response")
+                continue
+            if ResponseStatus.Name(response.status) == "NO_MATCH":
+                return info
+            if response.error:
+                print("[ERROR]: {}".format(response.error))
+
+            for n, res in enumerate(response.results):
+                if res.confidence > confidence:
+                    confidence = res.confidence
+                    info[0] = res.semantic_interpretation
+        info[1] = confidence
+        return info
+
+    if __name__ == '__main__':
+        ap = AddressProvider()
+        wave_file = "file.wav"
+        grammar_file = "movie_grammar.abnf"
+        address = ap.get("sarmata")
+
+        audio = load_wave(wave_file)
+
+        settings = SarmataSettings()
+        session_id = os.path.basename(wave_file)
+        settings.set_session_id(session_id)
+        settings.load_grammar(grammar_file)
+        recognizer = SarmataRecognizer(address)
+        results = recognizer.recognize(audio, settings)
+
+        info_info = print_results2(results)
+        print(info_info)
+
+
+    #label2.pack()
+
+
+root = Tk()
+root.title("Filmoteka")
+
+var = StringVar()
+t=True
+#label3 = Message(root, textvariable=var, relief=RAISED,width=200,pady=5 )
+#var.set("Spis Twoich filmów:\n 1.Titanic\n 2.Piraci z Karaibów\n 3.Przyjaciele\n 4.Pamiętnik\n 5.Mała Syrenka\n 6.Epoka lodowcowa\n 7.Incepcja")
+b=Button(root,text=" MIRIAM",command=PressedButton,bg="RED",font="Times 18")
+label1=Label(root,text="Aby uruchomić program wciśnij przycisk MIRIAM",bg="White",font="Times 12")
+#c=Button(root,text="Włącz mikrofon",bg="RED",font="Times 18")
+#label2=Label(root,text="Aby program mógł Cię słuchać naciśnij przycisk włącz mikrofon",bg="White",font="Times 12")
+b.pack(side=TOP)
+#c.pack()
+label1.pack(fill=BOTH)
+#label2.pack(fill=BOTH)
+separator = Frame(height=2, bd=1, relief=SUNKEN)
+separator.pack(fill=BOTH, padx=5, pady=5)
+
+
+
+#label2.pack()
+root.mainloop()
